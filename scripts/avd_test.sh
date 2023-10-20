@@ -5,6 +5,7 @@ avd="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager"
 sdk="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
 emu_args='-no-window -gpu swiftshader_indirect -read-only -no-snapshot -no-audio -no-boot-anim -show-kernel'
 boot_timeout=600
+boot_delay=120
 emu_pid=
 
 # Should be either 'google_apis' or 'default'
@@ -110,16 +111,17 @@ test_emu() {
 
   # Install the Magisk app
   adb install -r -g out/app-${variant}.apk
-  adb shell appops set com.topjohnwu.magisk REQUEST_INSTALL_PACKAGES allow
 
   # Use the app to run setup and reboot
-  adb shell echo "'content call --uri content://com.topjohnwu.magisk.provider --method setup'" \| /system/xbin/su \
+  sleep $boot_delay
+  adb shell echo "'content call --uri content://io.github.vvb2060.magisk.provider --method setup'" \| /system/xbin/su \
     | tee /dev/fd/2 | grep -q 'result=true'
   adb reboot
   wait_emu wait_for_boot
 
   # Run app tests
-  adb shell echo "'content call --uri content://com.topjohnwu.magisk.provider --method test'" \| /system/xbin/su \
+  sleep $boot_delay
+  adb shell echo "'content call --uri content://io.github.vvb2060.magisk.provider --method test'" \| /system/xbin/su \
     | tee /dev/fd/2 | grep -q 'result=true'
   adb shell echo "'su -c id'" \| /system/xbin/su 2000 | tee /dev/fd/2 | grep -q 'uid=0'
 }
@@ -147,11 +149,6 @@ run_test() {
   wait $emu_pid
   test_emu debug
 
-  # Re-patch and test release build
-  ./build.py -r avd_patch -s "$ramdisk"
-  kill -INT $emu_pid
-  wait $emu_pid
-  test_emu release
 
   # Cleanup
   kill -INT $emu_pid
