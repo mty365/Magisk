@@ -107,6 +107,9 @@ test_emu() {
   emu_pid=$!
   wait_emu wait_for_boot
 
+  adb shell cat /proc/1/mountinfo
+  adb shell "/system/xbin/su -c ls -lZ /debug_ramdisk"
+  adb shell "/system/xbin/su -c ls -lZ /data/adb"
   adb shell magisk -v
 
   # Install the Magisk app
